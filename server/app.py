@@ -9,6 +9,46 @@ from dotenv import load_dotenv
 import os   
 import sys
 
+from docx import Document
+
+
+
+from dotenv import load_dotenv
+import os
+
+import requests
+
+def gemini_answer(query, context):
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+    headers = {
+        "Content-Type": "application/json",
+        "x-goog-api-key": GEMINI_API_KEY
+    }
+    data = {
+        "contents": [{
+            "parts": [{
+                "text": f"Based on this document content:\n\n{context}\n\nAnswer this question:\n{query}"
+            }]
+        }]
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        result = response.json()
+        print("Gemini Response:", result)
+        return result["candidates"][0]["content"]["parts"][0]["text"]
+    except Exception as e:
+        print("Gemini API error:", e)
+        return "Could not get a response from Gemini API."
+
+
+
+
+load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
@@ -32,6 +72,14 @@ db = psycopg2.connect(database=os.getenv('DATABASE_NAME'), user=os.getenv('DATAB
                         keepalives_interval=10, keepalives_count=5)
 
 # # Get all the services
+
+
+def extract_text(doc_path):
+    doc = Document(doc_path)
+    full_text = []
+    for para in doc.paragraphs:
+        full_text.append(para.text)
+    return "\n".join(full_text)
 
 
 @app.route('/api/services', methods=["GET"])
@@ -185,5 +233,28 @@ def chat():
     response = get_document(user_input['user_chat'])
     return jsonify({'aiMessage': response})
 
+
+@app.route('/api/chatdoc', methods=['POST'])
+def chatdoc():
+    data = request.get_json()
+    query = data.get("query")
+    doc_name = data.get("doc_name", "Output2.docx")  # default document
+
+    doc_path = os.path.join("docs", doc_name)
+    if not os.path.exists(doc_path):
+        return jsonify({"error": "Document not found"}), 404
+
+    # Extract document content
+    doc_text = extract_text(doc_path)
+
+    # Ask Gemini
+    answer = gemini_answer(query, doc_text)
+
+    return jsonify({"answer": answer})
+
+
+
 if __name__ == '__main__':
     app.run(debug=True)
+
+

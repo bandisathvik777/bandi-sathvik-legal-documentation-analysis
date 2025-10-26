@@ -34,32 +34,70 @@ function Chat() {
       user_chat: input,
     };
 
-    setTimeout(() => {
-      fetch(`http://127.0.0.1:5000/api/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      })
-        .then((res) => {
-          if (!res.ok) {
-            throw Error("could not fetch");
-          }
-          return res.json();
-        })
-        .then((res) => {
+    // setTimeout(() => {
+    //   // fetch(`http://127.0.0.1:5000/api/chat`, {
+    //   //   method: "POST",
+    //   //   headers: {
+    //   //     "Content-Type": "application/json",
+    //   //   },
+    //   //   body: JSON.stringify(data),
+    //   // })
+    //   //   .then((res) => {
+    //   //     if (!res.ok) {
+    //   //       throw Error("could not fetch");
+    //   //     }
+    //   //     return res.json();
+    //   //   })
+    //   //   .then((res) => {
           
-          setChats((prevChats) => {
-            const updatedChats = [...prevChats];
-            updatedChats[updatedChats.length - 1].ai_chat = res.aiMessage; 
-            return updatedChats;
-          });
-        })
-        .catch((err) => {
-          console.log(err);
-        });
-    }, 2000);
+    //   //     setChats((prevChats) => {
+    //   //       const updatedChats = [...prevChats];
+    //   //       updatedChats[updatedChats.length - 1].ai_chat = res.aiMessage; 
+    //   //       return updatedChats;
+    //   //     });
+    //   //   })
+    //   //   .catch((err) => {
+    //   //     console.log(err);
+    //   //   });
+
+
+    // }, 2000);
+
+    setTimeout(() => {
+  fetch(`http://127.0.0.1:5000/api/chatdoc`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      query: input,
+      doc_name: "Output2.docx" // make sure this matches your server docs file
+    }),
+  })
+    .then((res) => {
+      if (!res.ok) {
+        throw Error("Could not fetch Gemini response");
+      }
+      return res.json();
+    })
+    .then((res) => {
+      setChats((prevChats) => {
+        const updatedChats = [...prevChats];
+        // update the bot message with Gemini’s answer
+        updatedChats[updatedChats.length - 1].ai_chat = res.answer;
+        return updatedChats;
+      });
+    })
+    .catch((err) => {
+      console.error("Error:", err);
+      setChats((prevChats) => {
+        const updatedChats = [...prevChats];
+        updatedChats[updatedChats.length - 1].ai_chat = "Error contacting Gemini API.";
+        return updatedChats;
+      });
+    });
+}, 2000);
+
   };
 
   return (
