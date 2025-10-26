@@ -20,32 +20,37 @@ An AI-powered solution to simplify legal documentation for individuals and small
 
 ## File Structure
 
-📂 Legal-Documentation-Assistant
-┣ 📂assets // Images, gifs, icons
-┣ 📂client // Frontend
-┃ ┣ 📂src
-┃ ┃ ┣ 📂components // React components (Chat, Forms, etc.)
-┃ ┃ ┣ 📄Home.jsx
-┃ ┃ ┣ 📄Chat.jsx
-┃ ┣ 📂public
-┃ ┃ ┣ 📄index.html
-┣ 📂model // AI models (Cosine similarity, Bag of Words)
-┃ ┣ 📄trained_model.pth
-┃ ┣ 📄chat.py
-┣ 📂server // Backend (Flask + Docs)
-┃ ┣ 📂docs
-┃ ┃ ┣ 📄localfile.docx // Template documents
-┃ ┃ ┣ 📄Output2.docx // Generated document (overwrites per request)
-┃ ┣ 📄app.py
-┃ ┣ 📄createdatabase.py
-┃ ┣ 📄requirements.txt
-┣ 📄README.md
-
-yaml
-Copy code
-
----
-
+👨‍💻Legal-Documentation-Assistant
+ ┣ 📂assets                            // Contains all the reference gifs, images
+ ┣ 📂client                            // Frontend        
+ ┃ ┣ 📂src                                      
+ ┃ ┃ ┣ 📂components  
+ ┃ ┃ ┃ ┣ 📄Chat.jsx
+ ┃ ┃ ┣ 📄about.jsx
+ ┃ ┃ ┣ 📄Faq.jsx
+ ┃ ┃ ┣ 📄Home.jsx
+ ┃ ┃ ┣ 📄InputForm.jsx
+ ┃ ┃ ┣ 📄LoginPage.jsx
+ ┃ ┣ 📂public 
+ ┃ ┃ ┣ 📄index.html
+ ┣ 📂model                             // Standalone model         
+ ┃ ┣ 📄similarity.py                   // Based on Cosine Similarity
+ ┃ ┣ 📄bot.py    
+ ┃ ┣ 📄chat.py                         // To chat with the standalone model
+ ┃ ┣ 📄model.py                        // Based on Bag of Words
+ ┃ ┣ 📄train.py                        
+ ┃ ┣ 📄dataset.py 
+ ┃ ┣ 📄util.py   
+ ┃ ┣ 📄trained_model.pth
+ ┃ ┣ 📄intents.json                    // Dataset 
+ ┣ 📂server                            // Backend 
+ ┃ ┣ 📂docs  
+ ┃ ┃ ┣ 📄localfile.docx
+ ┃ ┃ ┣ 📄Output2.docx
+ ┃ ┣ 📄app.py 
+ ┃ ┣ 📄createdatabase.py  
+ ┃ ┣ 📄requirements.txt      
+ ┣ 📄README.md
 ## Getting Started
 
 ### Clone Repository
