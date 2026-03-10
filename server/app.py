@@ -206,23 +206,34 @@ def final_content():
     # -----------------------------
     # Receive form data
     # -----------------------------
-
     form_details = request.json
     print("Form details:", form_details)
 
     form_details.pop("form_id", None)
 
     # -----------------------------
-    # Load LOCAL template
+    # Load template from PostgreSQL
     # -----------------------------
+    cur = db.cursor()
 
-    template_path = "docs/localfile.docx"
+    cur.execute(
+        "SELECT template_file FROM templates WHERE template_id = %s",
+        (2,)
+    )
+
+    file_data = cur.fetchone()[0]
+    cur.close()
+
+    template_path = "docs/template_from_db.docx"
+
+    with open(template_path, "wb") as f:
+        f.write(file_data)
+
     doc = Document(template_path)
 
     # -----------------------------
     # Create placeholder mapping
     # -----------------------------
-
     placeholder_mapping = {}
 
     for key, value in form_details.items():
@@ -231,7 +242,6 @@ def final_content():
     # -----------------------------
     # Function to replace placeholders
     # -----------------------------
-
     def replace_text(text):
 
         # replace longer placeholders first (#10 before #1)
@@ -243,14 +253,12 @@ def final_content():
     # -----------------------------
     # Replace in paragraphs
     # -----------------------------
-
     for paragraph in doc.paragraphs:
         paragraph.text = replace_text(paragraph.text)
 
     # -----------------------------
     # Replace in tables
     # -----------------------------
-
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
@@ -260,7 +268,6 @@ def final_content():
     # -----------------------------
     # Save generated document
     # -----------------------------
-
     output_path = "docs/Output2.docx"
 
     if os.path.exists(output_path):
@@ -271,7 +278,6 @@ def final_content():
     # -----------------------------
     # Convert DOCX → HTML
     # -----------------------------
-
     with open(output_path, "rb") as f:
         html = mammoth.convert_to_html(f)
 
@@ -280,7 +286,6 @@ def final_content():
     return jsonify({
         "content": html.value
     })
-
 
 # -----------------------------
 # Basic Chatbot
