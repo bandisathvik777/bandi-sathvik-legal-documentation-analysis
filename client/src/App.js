@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-
+import OCRPage from "./OCRPage";
 import "./App.css";
 import React from "react";
 import Home from "./Home";
@@ -32,6 +32,7 @@ function App() {
             <Route path="/faq" element={<Faq />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/ocr" element={<OCRPage />} />
             {/* <Route path="/chat" element={<Chat />} /> */}
           </Routes>
           <ToastContainer />

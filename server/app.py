@@ -8,10 +8,20 @@ from dotenv import load_dotenv
 import os
 import sys
 
+import pytesseract
+from pdf2image import convert_from_path
+from PyPDF2 import PdfReader
+from PIL import Image
+
+
 # Fix Python path so we can import model folder
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
+
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+POPPLER_PATH = r"C:\Users\Sathvik\Downloads\Release-23.11.0-0\poppler-23.11.0\Library\bin"
 
 from model.similarity import get_document
 from legalbert import analyze_legal_text
@@ -69,8 +79,11 @@ Answer clearly and quote relevant clauses.
 
     try:
         return result["candidates"][0]["content"]["parts"][0]["text"]
-    except:
-        return "Gemini could not generate a response."
+    except Exception as e:
+        
+        print("Gemini ERROR:", result)
+        print("Exception:", e)
+        return "Gemini failed"
 
 # -----------------------------
 # Extract DOCX text
@@ -206,34 +219,23 @@ def final_content():
     # -----------------------------
     # Receive form data
     # -----------------------------
+
     form_details = request.json
     print("Form details:", form_details)
 
     form_details.pop("form_id", None)
 
     # -----------------------------
-    # Load template from PostgreSQL
+    # Load LOCAL template
     # -----------------------------
-    cur = db.cursor()
 
-    cur.execute(
-        "SELECT template_file FROM templates WHERE template_id = %s",
-        (2,)
-    )
-
-    file_data = cur.fetchone()[0]
-    cur.close()
-
-    template_path = "docs/template_from_db.docx"
-
-    with open(template_path, "wb") as f:
-        f.write(file_data)
-
+    template_path = "docs/localfile.docx"
     doc = Document(template_path)
 
     # -----------------------------
     # Create placeholder mapping
     # -----------------------------
+
     placeholder_mapping = {}
 
     for key, value in form_details.items():
@@ -242,6 +244,7 @@ def final_content():
     # -----------------------------
     # Function to replace placeholders
     # -----------------------------
+
     def replace_text(text):
 
         # replace longer placeholders first (#10 before #1)
@@ -253,12 +256,14 @@ def final_content():
     # -----------------------------
     # Replace in paragraphs
     # -----------------------------
+
     for paragraph in doc.paragraphs:
         paragraph.text = replace_text(paragraph.text)
 
     # -----------------------------
     # Replace in tables
     # -----------------------------
+
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
@@ -268,6 +273,7 @@ def final_content():
     # -----------------------------
     # Save generated document
     # -----------------------------
+
     output_path = "docs/Output2.docx"
 
     if os.path.exists(output_path):
@@ -278,6 +284,7 @@ def final_content():
     # -----------------------------
     # Convert DOCX → HTML
     # -----------------------------
+
     with open(output_path, "rb") as f:
         html = mammoth.convert_to_html(f)
 
@@ -286,6 +293,7 @@ def final_content():
     return jsonify({
         "content": html.value
     })
+
 
 # -----------------------------
 # Basic Chatbot
@@ -327,6 +335,62 @@ def chatdoc():
         "answer": answer,
         "embedding_shape": str(embedding.shape)
     })
+
+def extract_text_from_pdf(file_path):
+
+    text = ""
+
+    # 🔹 Try normal extraction first
+    try:
+        reader = PdfReader(file_path)
+        for page in reader.pages:
+            text += page.extract_text() or ""
+    except:
+        pass
+
+    # 🔹 If text is too small → use OCR
+    if len(text.strip()) < 50:
+        print("Using OCR for scanned PDF...")
+
+        images = convert_from_path(file_path, poppler_path=POPPLER_PATH)
+
+        for img in images:
+            text += pytesseract.image_to_string(img)
+
+    return text
+@app.route('/api/pdf-chat', methods=['POST'])
+def pdf_chat():
+
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    file = request.files['file']
+    query = request.form.get("query")
+
+    file_path = os.path.join("docs", file.filename)
+    file.save(file_path)
+
+    # 🔥 Extract text
+    text = extract_text_from_pdf(file_path)
+
+    if len(text.strip()) == 0:
+        return jsonify({"error": "Could not extract text"}), 500
+
+    # 🔥 Chunk text (important for large PDFs)
+    chunks = [text[i:i+3000] for i in range(0, len(text), 3000)]
+
+    answers = []
+
+    for chunk in chunks[:3]:  # only top 3 chunks
+        ans = gemini_answer(query, chunk)
+        answers.append(ans)
+
+    final_answer = "\n".join(answers)
+
+    return jsonify({
+        "answer": final_answer
+    })
+
 
 # -----------------------------
 # Run Server
