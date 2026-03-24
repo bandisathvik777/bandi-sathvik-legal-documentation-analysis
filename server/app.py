@@ -219,51 +219,66 @@ def final_content():
     # -----------------------------
     # Receive form data
     # -----------------------------
-
     form_details = request.json
     print("Form details:", form_details)
 
+    form_id = form_details.get("form_id")
     form_details.pop("form_id", None)
 
     # -----------------------------
-    # Load LOCAL template
+    # Get service_id from DB
     # -----------------------------
+    cur = db.cursor()
+    cur.execute("SELECT service_id FROM forms WHERE form_id = %s", [form_id])
+    result = cur.fetchone()
 
-    template_path = "docs/localfile.docx"
+    if not result:
+        return jsonify({"error": "Form not found"}), 404
+
+    service_id = result[0]
+    cur.close()
+
+    # -----------------------------
+    # SELECT TEMPLATE
+    # -----------------------------
+    if service_id == 1:
+        template_path = "docs/localfile.docx"
+    elif service_id == 2:
+        template_path = "docs/localfile2.docx"
+    elif service_id == 3:
+        template_path = "docs/localfile3.docx"
+    else:
+        return jsonify({"error": "Invalid service"}), 400
+
+    # -----------------------------
+    # Load document
+    # -----------------------------
     doc = Document(template_path)
 
     # -----------------------------
     # Create placeholder mapping
     # -----------------------------
-
-    placeholder_mapping = {}
-
-    for key, value in form_details.items():
-        placeholder_mapping[f"#{key}"] = str(value)
+    placeholder_mapping = {
+        f"#{key}": str(value) for key, value in form_details.items()
+    }
 
     # -----------------------------
-    # Function to replace placeholders
+    # Replace function
     # -----------------------------
-
     def replace_text(text):
-
-        # replace longer placeholders first (#10 before #1)
         for placeholder in sorted(placeholder_mapping.keys(), key=len, reverse=True):
             text = text.replace(placeholder, placeholder_mapping[placeholder])
-
         return text
 
     # -----------------------------
     # Replace in paragraphs
     # -----------------------------
-
     for paragraph in doc.paragraphs:
         paragraph.text = replace_text(paragraph.text)
 
     # -----------------------------
     # Replace in tables
     # -----------------------------
-
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
@@ -271,9 +286,8 @@ def final_content():
                     paragraph.text = replace_text(paragraph.text)
 
     # -----------------------------
-    # Save generated document
+    # Save output
     # -----------------------------
-
     output_path = "docs/Output2.docx"
 
     if os.path.exists(output_path):
@@ -284,7 +298,6 @@ def final_content():
     # -----------------------------
     # Convert DOCX → HTML
     # -----------------------------
-
     with open(output_path, "rb") as f:
         html = mammoth.convert_to_html(f)
 
@@ -293,7 +306,6 @@ def final_content():
     return jsonify({
         "content": html.value
     })
-
 
 # -----------------------------
 # Basic Chatbot
